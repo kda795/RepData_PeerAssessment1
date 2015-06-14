@@ -1,25 +1,143 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Program Assigment 1"
+author: "kda795"
+date: "14 июня 2015 г."
+output: html_document
 ---
 
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-## Loading and preprocessing the data
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+Loading and preprocessing the data
+```{r}
+library(curl)
+# Please set your own working directory
+fileName<-"repdata_data_activity.zip"
+if (! file.exists(fileName)) {
+  fileUrl<-"http://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+  download.file(fileUrl, fileName, quiet = TRUE, mode = "wb")
+  unzip(fileName)
+}
+activity<-read.csv("activity.csv",sep=",",header=TRUE)
 
 
+#What is mean total number of steps taken per day?
+# Get list of days from pattern
+List_of_days<-unique(activity$date)
+#List sum stepts of every days
+steps_of_day<-c()
+#List of mean step of every day
+mean_steps_of_day<-c()
+#List of median step of every day
+median_steps_of_day<-c()
+for (day in List_of_days) {
+   #Calculate sum, mean and median of every day
+   steps_of_day<-c(steps_of_day,sum(activity$steps[activity$date == day],na.rm=TRUE))
+   mean_steps_of_day<-c(mean_steps_of_day,mean(activity$steps[activity$date == day],na.rm=TRUE))
+   median_steps_of_day<-c(median_steps_of_day, median(activity$steps[activity$date == day],na.rm=TRUE))
+}
+steps_of_day<-data.frame(day=List_of_days,steps=steps_of_day)
+# Make a histogram of the total number of steps taken each day
+hist(steps_of_day$steps,xlab="steps",main="Steps of days")
+```
+Print mean steps of the day
+```{r}
+print(mean_steps_of_day)
+```
+Print median steps of the day
+```{r}
+print(median_steps_of_day)
+```
 
-## What is mean total number of steps taken per day?
+```{r}
+#What is the average daily activity pattern?
+List_of_5min_intervals<-unique(activity$interval)
+steps_of_5min_intervals<-c()
+for (int in List_of_5min_intervals) {
+  steps_of_5min_intervals<-c(steps_of_5min_intervals,mean(activity  $steps[activity$interval == int],na.rm=TRUE))
+}
+steps_of_5min_intervals<-data.frame(interval=List_of_5min_intervals,mean_steps=steps_of_5min_intervals)
 
 
+#Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+plot(steps_of_5min_intervals$interval,steps_of_5min_intervals$mean_steps,type='l',xlab="Minute Interval",ylab="Mean steps",main="Minute interval of the day")
+```
 
-## What is the average daily activity pattern?
+Interval 835 contains maximum number of steps
+```{r}
+# Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+steps_of_5min_intervals[steps_of_5min_intervals$mean_steps == max(steps_of_5min_intervals$mean_steps,na.rm=TRUE),]
 
+```
 
+There is 2304 missing value in dataset
+```{r}
+#Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+table(is.na(activity$steps))
+```
 
-## Imputing missing values
+```{r}
+#Create a new dataset that is equal to the original dataset but with the missing data filled in.
+activity_fillin_NA<-activity
+mean_stets<-round(mean(activity$steps,na.rm=TRUE))
+for (i in 1:nrow(activity_fillin_NA)) {
+  if (is.na(activity_fillin_NA$steps[i]))
+    #Devise a strategy for filling in all of the missing values in the dataset. 
+    activity_fillin_NA$steps[i]<-abs(round(rnorm(1,mean_stets,mean_stets),0))
+}
 
+steps_of_day_fillin_NA<-c()
+mean_steps_of_day_fillin_NA<-c()
+median_steps_of_day_fillin_NA<-c()
+for (day in List_of_days) {
+  #Calculate sum, mean and median of every day
+  steps_of_day_fillin_NA<-c(steps_of_day_fillin_NA,sum(activity_fillin_NA$steps[activity_fillin_NA$date == day],na.rm=TRUE))
+  mean_steps_of_day_fillin_NA<-c(mean_steps_of_day_fillin_NA,round(mean(activity_fillin_NA$steps[activity_fillin_NA$date == day],na.rm=TRUE),0))
+  median_steps_of_day_fillin_NA<-c(median_steps_of_day_fillin_NA,round(median(activity_fillin_NA$steps[activity_fillin_NA$date == day],na.rm=TRUE),0))
+}
+steps_of_day_fillin_NA<-data.frame(day=List_of_days,steps=steps_of_day_fillin_NA)
 
+#Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day.
+```
+Histogram of day with fill in 
+```{r}
+hist(steps_of_day_fillin_NA$steps,xlab="steps",main="Steps of days with NA fill in")
+```
+Print mean steps of the day with fill in
+```{r}
+print(mean_steps_of_day_fillin_NA)
+```
+Print median steps of the day with fill in
+```{r}
+print(median_steps_of_day_fillin_NA)
+```
 
-## Are there differences in activity patterns between weekdays and weekends?
+Weekdays - 0, Weekends - 1, 
+You should to change "суббота" and "воскресенье" to "saturday" and "sunday", because I had russian locale on my PC
+```{r}
+days<-c()
+for (i in 1:length(activity$date)) {
+   
+   if ((weekdays(as.Date(activity$date[i])) == "суббота") | (weekdays(as.Date(activity$date[i])) == "воскресенье"))
+    days<-c(days,1)
+  else days<-c(days,0)
+}
+
+activity<-data.frame(activity, days=days)
+activity_weekdays<-subset(activity,activity$days == 0)
+activity_weekends<-subset(activity,activity$days == 1)
+steps_of_5min_intervals_weekdays<-c()
+steps_of_5min_intervals_weekends<-c()
+for (int in List_of_5min_intervals) {
+  steps_of_5min_intervals_weekdays<-c(steps_of_5min_intervals_weekdays,mean(activity$steps[activity$interval == int & activity$days == 0 ],na.rm=TRUE))
+  steps_of_5min_intervals_weekends<-c(steps_of_5min_intervals_weekends,mean(activity$steps[activity$interval == int & activity$days == 1 ],na.rm=TRUE))
+}
+```
+Yes, weekdays and weekends are different, probably because at the weekends man(women) has more time to walk :)
+```{r}
+par(mfrow=c(2,1))
+plot(List_of_5min_intervals,steps_of_5min_intervals_weekdays,type='l',col="red", main ='Weekdays',xlab = "5 minute interval",ylab="Number of steps")
+plot(List_of_5min_intervals,steps_of_5min_intervals_weekends,type='l',col="blue", main ='Weekends', xlab = "5 minute interval",ylab="Number of steps")
+```
+
